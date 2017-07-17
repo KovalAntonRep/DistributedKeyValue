@@ -3,6 +3,9 @@ package org.dimamir999.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.dimamir999.dao.FileDao;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
 
 import javax.management.RuntimeErrorException;
 import java.io.File;
@@ -10,12 +13,15 @@ import java.io.IOException;
 
 import static java.lang.Thread.sleep;
 
+@Component(value = "fileMerger")
+@ComponentScan
 public class FileMerger implements Runnable {
     private static final Logger LOG = LogManager.getLogger(FileMerger.class);
     private String dataFile;
     private String mergedFile;
     private int timeout;
-    private FileDao fileDao = new FileDao();
+    @Autowired
+    private FileDao fileDao;
 
     public FileMerger(String dataFile, String mergedFile, int timeout) {
         this.timeout = timeout;
@@ -52,6 +58,7 @@ public class FileMerger implements Runnable {
 
     @Override
     public void run() {
+        LOG.info("FileMerging thread has started");
         while (true) {
             try {
                 sleep(timeout);

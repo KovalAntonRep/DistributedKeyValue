@@ -4,24 +4,52 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.dimamir999.dao.FileDao;
 import org.dimamir999.model.KeyValue;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.stereotype.Service;
 
 import javax.management.RuntimeErrorException;
 import java.io.File;
 import java.io.IOException;
 
+@Service(value = "operationService")
+@PropertySource("distributed-key-value.properties")
+@ComponentScan
 public class OperationService {
     private static final Logger LOG = LogManager.getLogger(OperationService.class);
-    private PropertyReader propertyReader = new PropertyReader("distributed-key-value.properties");
-    private String tempFile = "temp_data";
-    private String dataFile = "data";
-    private FileDao fileDao = new FileDao();
-    private StringKeyValueConverter stringKeyValueConverter = new StringKeyValueConverter();
+
+    @Value("${name.tempfile}")
+    private String tempFile;
+
+    @Value("${name.datafile}")
+    private String dataFile;
+
+    @Autowired
+    private FileDao fileDao;
+
+    @Autowired
+    private StringKeyValueConverter stringKeyValueConverter;
+
+    @Autowired
+    private FileMerger fileMerger;
 
     private boolean fileIsNotEmpty(String fileString) throws IOException {
         return !fileString.equals("");
     }
 
     public OperationService() {
+
+    }
+
+    public OperationService(FileDao fileDao, StringKeyValueConverter stringKeyValueConverter) {
+        this();
+        this.fileDao = fileDao;
+        this.stringKeyValueConverter = stringKeyValueConverter;
+    }
+
+    private void prepareFiles() {
         File file = new File(System.getProperty("user.dir") + "/" + tempFile);
 
         if(!file.exists()) {
@@ -35,19 +63,13 @@ public class OperationService {
             }
         }
 
-        final int TIMEOUT = Integer.parseInt(propertyReader.getProperty("merging.timeout"));
-
-        Thread fileMerger = new Thread(new FileMerger(dataFile, tempFile, TIMEOUT));
-        fileMerger.start();
-    }
-
-    public OperationService(FileDao fileDao, StringKeyValueConverter stringKeyValueConverter) {
-        this();
-        this.fileDao = fileDao;
-        this.stringKeyValueConverter = stringKeyValueConverter;
+        Thread fileMergerThread = new Thread(fileMerger);
+        fileMergerThread.start();
     }
 
     public KeyValue<String, String> create(KeyValue<String, String> keyValue) throws IOException {
+        prepareFiles();
+
         String allData = fileDao.read(dataFile);
 
         if (fileIsNotEmpty(allData)) {
@@ -78,6 +100,7 @@ public class OperationService {
     }
 
     public KeyValue<String, String> get(String key) throws IOException {
+        prepareFiles();
         String allData = fileDao.read(dataFile);
 
         if (fileIsNotEmpty(allData)) {
@@ -113,6 +136,8 @@ public class OperationService {
     }
 
     public KeyValue<String, String> update(KeyValue<String, String> keyValue) throws IOException {
+        prepareFiles();
+
         String key = keyValue.getKey();
 
         String allData = fileDao.read(dataFile);
@@ -151,6 +176,8 @@ public class OperationService {
     }
 
     public KeyValue<String, String> delete(String key) throws IOException {
+        prepareFiles();
+
         String allData = fileDao.read(dataFile);
 
         if (fileIsNotEmpty(allData)) {

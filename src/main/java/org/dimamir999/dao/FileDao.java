@@ -2,6 +2,7 @@ package org.dimamir999.dao;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Repository;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -9,6 +10,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
+@Repository(value = "fileDao")
 public class FileDao {
     private static final Logger LOG = LogManager.getLogger(FileDao.class);
 

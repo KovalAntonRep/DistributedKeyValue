@@ -4,9 +4,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.dimamir999.model.Command;
 import org.dimamir999.model.CommandType;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 
+@Component(value = "commandParser")
 public class CommandParser {
     private static final Logger LOG = LogManager.getLogger(CommandParser.class);
 

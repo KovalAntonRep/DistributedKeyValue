@@ -1,7 +1,9 @@
 package org.dimamir999.service;
 
 import org.dimamir999.model.KeyValue;
+import org.springframework.stereotype.Component;
 
+@Component(value = "stringKeyValueConverter")
 public class StringKeyValueConverter {
 
     private static final String KEY_VALUE_SEPARATOR_PATTERN = "\\|-\\|";

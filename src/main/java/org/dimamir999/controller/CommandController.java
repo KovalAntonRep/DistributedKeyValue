@@ -6,12 +6,18 @@ import org.apache.logging.log4j.Logger;
 import org.dimamir999.model.KeyValue;
 import org.dimamir999.service.OperationService;
 import org.dimamir999.service.OperationServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+@Component(value = "commandController")
+@ComponentScan
 public class CommandController {
     private static final Logger LOG = LogManager.getLogger(CommandController.class);
-    private OperationService operationService = new OperationService();
+    @Autowired
+    private OperationService operationService;
 
     public String read(String key) throws OperationServiceException {
         try {

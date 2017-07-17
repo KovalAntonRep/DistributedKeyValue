@@ -2,14 +2,11 @@ import org.dimamir999.dao.FileDao;
 import org.dimamir999.model.KeyValue;
 import org.dimamir999.service.OperationService;
 import org.dimamir999.service.StringKeyValueConverter;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
