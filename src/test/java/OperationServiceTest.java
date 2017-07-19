@@ -1,17 +1,25 @@
+import org.dimamir999.config.Config;
 import org.dimamir999.dao.FileDao;
 import org.dimamir999.model.KeyValue;
 import org.dimamir999.service.OperationService;
 import org.dimamir999.service.StringKeyValueConverter;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = Config.class)
 public class OperationServiceTest {
     String key = "key";
     String value = "value";
@@ -20,6 +28,7 @@ public class OperationServiceTest {
     String line = "key|-|value";
     KeyValue<String, String> keyValue;
 
+    @Autowired
     OperationService operationService;
     @Mock private FileDao fileDao;
     @Mock private StringKeyValueConverter stringKeyValueConverter;
@@ -27,7 +36,8 @@ public class OperationServiceTest {
     @Before
     public void before() throws IOException {
         MockitoAnnotations.initMocks(this);
-        operationService = new OperationService(fileDao, stringKeyValueConverter);
+        operationService.setFileDao(fileDao);
+        operationService.setStringKeyValueConverter(stringKeyValueConverter);
 
         keyValue = new KeyValue<>(key, value);
     }

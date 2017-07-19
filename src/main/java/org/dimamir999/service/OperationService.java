@@ -43,9 +43,11 @@ public class OperationService {
 
     }
 
-    public OperationService(FileDao fileDao, StringKeyValueConverter stringKeyValueConverter) {
-        this();
+    public void setFileDao(FileDao fileDao) {
         this.fileDao = fileDao;
+    }
+
+    public void setStringKeyValueConverter(StringKeyValueConverter stringKeyValueConverter) {
         this.stringKeyValueConverter = stringKeyValueConverter;
     }
 
