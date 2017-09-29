@@ -14,7 +14,6 @@ import java.net.Socket;
 
 @Repository(value = "socketServer")
 @PropertySource("distributed-key-value.properties")
-@ComponentScan
 public class SocketServer {
     private final Logger LOG = LogManager.getLogger(SocketServer.class);
     @Value("${client.port}") private int port;

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 @Component(value = "commandController")
-@ComponentScan
 public class CommandController {
     private static final Logger LOG = LogManager.getLogger(CommandController.class);
     @Autowired

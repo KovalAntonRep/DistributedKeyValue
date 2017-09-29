@@ -4,44 +4,36 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.dimamir999.dao.FileDao;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
-import javax.management.RuntimeErrorException;
-import java.io.File;
 import java.io.IOException;
 
 import static java.lang.Thread.sleep;
 
 @Component(value = "fileMerger")
-@ComponentScan
 public class FileMerger implements Runnable {
     private static final Logger LOG = LogManager.getLogger(FileMerger.class);
+
+    @Value("${name.datafile}")
     private String dataFile;
-    private String mergedFile;
+
+    @Value("${name.tempfile}")
+    private String tempFile;
+
+    @Value("${merging.timeout}")
     private int timeout;
+
     @Autowired
     private FileDao fileDao;
 
-    public FileMerger(String dataFile, String mergedFile, int timeout) {
-        this.timeout = timeout;
-        this.dataFile = dataFile;
-        this.mergedFile = mergedFile;
+    public FileMerger() {
 
-        File file = new File(System.getProperty("user.dir") + "/" + dataFile);
-        if(!file.exists()) {
-            file.getParentFile().mkdirs();
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                LOG.error("New file creating error", e);
-                throw new RuntimeErrorException(null);
-            }
-        }
     }
 
     private void fileMerge() throws IOException {
-        String mergeData = fileDao.read(mergedFile);
+        String mergeData = fileDao.read(tempFile);
 
         for (String line: mergeData.split("/n")) {
             fileDao.append(line, dataFile);
@@ -50,8 +42,8 @@ public class FileMerger implements Runnable {
         LOG.info("Files are successfully merged");
     }
 
-    private void fileClear() throws IOException {
-        fileDao.write("", mergedFile);
+    private void tempFileClear() throws IOException {
+        fileDao.write("", tempFile);
 
         LOG.info("Temp file is cleared");
     }
@@ -73,7 +65,7 @@ public class FileMerger implements Runnable {
             }
 
             try {
-                fileClear();
+                tempFileClear();
             } catch (IOException e) {
                 LOG.error("Temp data file is not cleared", e);
             }

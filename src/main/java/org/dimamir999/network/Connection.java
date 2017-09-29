@@ -6,6 +6,7 @@ import org.dimamir999.controller.CommandController;
 import org.dimamir999.model.Command;
 import org.dimamir999.service.CommandParser;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -15,7 +16,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.List;
 
-@Component(value = "connection")
 public class Connection {
     private BufferedReader in;
     private PrintWriter out;
@@ -48,11 +48,8 @@ public class Connection {
 
     private class ClientConnectionRunnable implements Runnable {
         private final Logger LOG = LogManager.getLogger(Connection.ClientConnectionRunnable.class);
-        @Autowired
         private Connection connection;
-        @Autowired
         private CommandController commandController;
-        @Autowired
         private CommandParser parser;
 
         public ClientConnectionRunnable(Connection connection, CommandController controller, CommandParser parser) {

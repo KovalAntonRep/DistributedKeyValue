@@ -6,8 +6,6 @@ import org.dimamir999.dao.FileDao;
 import org.dimamir999.model.KeyValue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import javax.management.RuntimeErrorException;
@@ -15,8 +13,6 @@ import java.io.File;
 import java.io.IOException;
 
 @Service(value = "operationService")
-@PropertySource("distributed-key-value.properties")
-@ComponentScan
 public class OperationService {
     private static final Logger LOG = LogManager.getLogger(OperationService.class);
 
@@ -34,6 +30,8 @@ public class OperationService {
 
     @Autowired
     private FileMerger fileMerger;
+
+    boolean filesPrepared = false;
 
     private boolean fileIsNotEmpty(String fileString) throws IOException {
         return !fileString.equals("");
@@ -65,35 +63,35 @@ public class OperationService {
             }
         }
 
+        filesPrepared = true;
+
         Thread fileMergerThread = new Thread(fileMerger);
         fileMergerThread.start();
     }
 
-    public KeyValue<String, String> create(KeyValue<String, String> keyValue) throws IOException {
-        prepareFiles();
-
-        String allData = fileDao.read(dataFile);
+    private boolean cantCreateInFile(String fileName, KeyValue<String, String> keyValue) throws IOException {
+        String allData = fileDao.read(fileName);
 
         if (fileIsNotEmpty(allData)) {
             for (String line : allData.split("\n")) {
                 KeyValue<String, String> lineKeyValue = stringKeyValueConverter.decode(line);
                 if ((lineKeyValue.getKey()).equals(keyValue.getKey())) {
                     LOG.info("Object not added - key: '" + keyValue.getKey() + "' is already occupied, value: '" + lineKeyValue.getValue() + "'");
-                    return null;
+                    return true;
                 }
             }
         }
 
-        String tempData = fileDao.read(tempFile);
+        return false;
+    }
 
-        if (fileIsNotEmpty(tempData)) {
-            for (String line : tempData.split("\n")) {
-                KeyValue<String, String> lineKeyValue = stringKeyValueConverter.decode(line);
-                if ((lineKeyValue.getKey()).equals(keyValue.getKey())) {
-                    LOG.info("Object not added - key: '" + keyValue.getKey() + "' is already occupied, value: '" + lineKeyValue.getValue() + "'");
-                    return null;
-                }
-            }
+    public KeyValue<String, String> create(KeyValue<String, String> keyValue) throws IOException {
+        if (!filesPrepared) {
+            prepareFiles();
+        }
+
+        if (cantCreateInFile(dataFile, keyValue) || cantCreateInFile(tempFile, keyValue)) {
+            return null;
         }
 
         fileDao.append(stringKeyValueConverter.encode(keyValue), tempFile);
@@ -101,9 +99,8 @@ public class OperationService {
         return keyValue;
     }
 
-    public KeyValue<String, String> get(String key) throws IOException {
-        prepareFiles();
-        String allData = fileDao.read(dataFile);
+    private KeyValue<String, String> getFromFile(String fileName, String key) throws IOException {
+        String allData = fileDao.read(fileName);
 
         if (fileIsNotEmpty(allData)) {
             for (String line : allData.split("\n")) {
@@ -115,16 +112,22 @@ public class OperationService {
             }
         }
 
-        String tempData = fileDao.read(tempFile);
+        return null;
+    }
 
-        if (fileIsNotEmpty(tempData)) {
-            for (String line : tempData.split("\n")) {
-                KeyValue<String, String> keyValue = stringKeyValueConverter.decode(line);
-                if ((keyValue.getKey()).equals(key)) {
-                    LOG.info("Object returned - key: '" + key + "', value:'" + keyValue.getValue() + "'");
-                    return keyValue;
-                }
-            }
+    public KeyValue<String, String> get(String key) throws IOException {
+        if (!filesPrepared) {
+            prepareFiles();
+        }
+
+        KeyValue<String, String> keyValue = getFromFile(tempFile, key);
+        if (keyValue != null) {
+            return keyValue;
+        }
+
+        keyValue = getFromFile(dataFile, key);
+        if (keyValue != null) {
+            return keyValue;
         }
 
         return null;
@@ -137,35 +140,37 @@ public class OperationService {
         fileDao.write(newData, file);
     }
 
-    public KeyValue<String, String> update(KeyValue<String, String> keyValue) throws IOException {
-        prepareFiles();
-
+    private KeyValue<String, String> updateInFile(String fileName, KeyValue<String, String> keyValue) throws IOException {
         String key = keyValue.getKey();
-
-        String allData = fileDao.read(dataFile);
+        String allData = fileDao.read(fileName);
 
         if (fileIsNotEmpty(allData)) {
             for (String line : allData.split("\n")) {
                 KeyValue<String, String> oldKeyValue = stringKeyValueConverter.decode(line);
                 if ((oldKeyValue.getKey()).equals(key)) {
-                    changeValue(oldKeyValue, keyValue, allData, dataFile);
+                    changeValue(oldKeyValue, keyValue, allData, fileName);
                     LOG.info("Object updated - key: '" + key + "', old value:'" + oldKeyValue.getValue() + "', new value:'" + keyValue.getValue() + "'");
                     return oldKeyValue;
                 }
             }
         }
 
-        String tempData = fileDao.read(tempFile);
+        return null;
+    }
 
-        if (fileIsNotEmpty(tempData)) {
-            for (String line : tempData.split("\n")) {
-                KeyValue<String, String> oldKeyValue = stringKeyValueConverter.decode(line);
-                if ((oldKeyValue.getKey()).equals(key)) {
-                    changeValue(oldKeyValue, keyValue, tempData, tempFile);
-                    LOG.info("Object updated - key: '" + key + "', old value:'" + oldKeyValue.getValue() + "', new value:'" + keyValue.getValue() + "'");
-                    return oldKeyValue;
-                }
-            }
+    public KeyValue<String, String> update(KeyValue<String, String> keyValue) throws IOException {
+        if (!filesPrepared) {
+            prepareFiles();
+        }
+
+        KeyValue<String, String> oldKeyValue = updateInFile(tempFile, keyValue);
+        if (oldKeyValue != null) {
+            return oldKeyValue;
+        }
+
+        oldKeyValue = updateInFile(dataFile, keyValue);
+        if (oldKeyValue != null) {
+            return oldKeyValue;
         }
 
         return null;
@@ -177,33 +182,36 @@ public class OperationService {
         fileDao.write(newData, file);
     }
 
-    public KeyValue<String, String> delete(String key) throws IOException {
-        prepareFiles();
-
-        String allData = fileDao.read(dataFile);
+    private KeyValue<String, String> deleteFromFile(String fileName, String key) throws IOException {
+        String allData = fileDao.read(fileName);
 
         if (fileIsNotEmpty(allData)) {
             for (String line : allData.split("\n")) {
                 KeyValue<String, String> oldKeyValue = stringKeyValueConverter.decode(line);
                 if ((oldKeyValue.getKey()).equals(key)) {
-                    deleteValue(oldKeyValue, allData, dataFile);
+                    deleteValue(oldKeyValue, allData, fileName);
                     LOG.info("Object deleted - key: '" + key + "', value:'" + oldKeyValue.getValue() + "'");
                     return oldKeyValue;
                 }
             }
         }
 
-        String tempData = fileDao.read(tempFile);
+        return null;
+    }
 
-        if (fileIsNotEmpty(tempData)) {
-            for (String line : tempData.split("\n")) {
-                KeyValue<String, String> oldKeyValue = stringKeyValueConverter.decode(line);
-                if ((oldKeyValue.getKey()).equals(key)) {
-                    deleteValue(oldKeyValue, tempData, tempFile);
-                    LOG.info("Object deleted - key: '" + key + "', value:'" + oldKeyValue.getValue() + "'");
-                    return oldKeyValue;
-                }
-            }
+    public KeyValue<String, String> delete(String key) throws IOException {
+        if (!filesPrepared) {
+            prepareFiles();
+        }
+
+        KeyValue<String, String> oldKeyValue = deleteFromFile(tempFile, key);
+        if (oldKeyValue != null) {
+            return oldKeyValue;
+        }
+
+        oldKeyValue = deleteFromFile(dataFile, key);
+        if (oldKeyValue != null) {
+            return oldKeyValue;
         }
 
         return null;

@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component(value = "inboundMessageHandler")
-@ComponentScan
 public class InboundMessageHandler {
 
     private List<Connection> connections = new ArrayList<>();
